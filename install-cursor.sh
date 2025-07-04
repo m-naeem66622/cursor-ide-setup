@@ -286,6 +286,143 @@ EOF
     print_success "Desktop entry created at $DESKTOP_FILE"
 }
 
+# Create check-only script (for apt update)
+create_check_script() {
+    print_status "Creating check-only script..."
+    
+    cat > "/usr/local/bin/check-cursor-update" << 'EOF'
+#!/bin/bash
+
+# Cursor IDE Check-Only Script
+# This script only checks for updates without downloading (for apt update)
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Constants
+CURSOR_DIR="/opt/cursor-ai"
+CURSOR_BINARY="$CURSOR_DIR/cursor"
+VERSION_FILE="$CURSOR_DIR/version.txt"
+
+# Cursor download URLs (from their official API)
+CURSOR_API_BASE="https://cursor.com/api/download"
+CURSOR_LINUX_X64_URL="$CURSOR_API_BASE?platform=linux-x64&releaseTrack=stable"
+CURSOR_LINUX_ARM64_URL="$CURSOR_API_BASE?platform=linux-arm64&releaseTrack=stable"
+
+print_status() {
+    echo -e "${BLUE}[Cursor Check]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[Cursor Check]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[Cursor Check]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[Cursor Check]${NC} $1"
+}
+
+# Detect architecture
+detect_architecture() {
+    local arch
+    arch=$(uname -m)
+    
+    case "$arch" in
+        x86_64)
+            echo "x64"
+            ;;
+        aarch64|arm64)
+            echo "arm64"
+            ;;
+        *)
+            echo "unsupported"
+            ;;
+    esac
+}
+
+# Get latest version from API
+get_latest_cursor_version() {
+    local arch
+    arch=$(detect_architecture)
+    
+    local api_url
+    case "$arch" in
+        x64)
+            api_url="$CURSOR_LINUX_X64_URL"
+            ;;
+        arm64)
+            api_url="$CURSOR_LINUX_ARM64_URL"
+            ;;
+        *)
+            print_error "Unsupported architecture: $arch"
+            return 1
+            ;;
+    esac
+    
+    local response
+    response=$(curl -s "$api_url" 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        print_error "Failed to fetch version information from Cursor API"
+        return 1
+    fi
+    
+    local version
+    version=$(echo "$response" | jq -r '.version' 2>/dev/null)
+    if [ "$version" = "null" ] || [ -z "$version" ]; then
+        print_error "Failed to parse version from API response"
+        return 1
+    fi
+    
+    echo "$version"
+}
+
+# Check if Cursor is installed
+if [ ! -f "$CURSOR_BINARY" ]; then
+    print_warning "Cursor is not installed, skipping update check"
+    exit 0
+fi
+
+# Get current version
+current_version=""
+if [ -f "$VERSION_FILE" ]; then
+    current_version=$(cat "$VERSION_FILE")
+fi
+
+print_status "Checking for Cursor updates..."
+print_status "Current version: ${current_version:-unknown}"
+
+# Get latest version from API
+latest_version=$(get_latest_cursor_version)
+if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
+    print_error "Failed to check for updates"
+    exit 0  # Don't fail the apt update
+fi
+
+print_status "Latest version: $latest_version"
+
+# Compare versions
+if [ "$current_version" = "$latest_version" ]; then
+    print_status "Cursor is up to date"
+    exit 0
+fi
+
+print_status "New version available: ${current_version:-unknown} → $latest_version"
+print_status "Run 'sudo update-cursor' to install the update"
+EOF
+
+    chmod +x "/usr/local/bin/check-cursor-update"
+    print_success "Check-only script created"
+}
+
 # Create updater script
 create_updater_script() {
     print_status "Creating updater script..."
@@ -503,8 +640,9 @@ create_apt_hook() {
     
     cat > "$APT_HOOK" << EOF
 // Cursor IDE Auto-Updater APT Hook
-// This runs the Cursor updater after every apt upgrade
-DPkg::Post-Invoke {"/usr/local/bin/update-cursor || true";};
+// This mimics the behavior of other packages: apt update only checks for updates
+// Run check-only script after apt update (only check, don't download)
+APT::Update::Post-Invoke {"if [ -f /usr/local/bin/check-cursor-update ]; then /usr/local/bin/check-cursor-update || true; fi";};
 EOF
     
     print_success "APT hook created at $APT_HOOK"
@@ -567,6 +705,7 @@ main() {
     print_success "Desktop entry created"
     
     print_status "Step 8/8: Setting up auto-updater..."
+    create_check_script
     create_updater_script
     create_apt_hook
     print_success "Auto-updater configured"
@@ -578,10 +717,12 @@ main() {
     print_success ""
     print_success "What's next:"
     print_success "  • Launch Cursor from your application menu"
-    print_success "  • Updates will happen automatically when you run 'sudo apt upgrade'"
+    print_success "  • Run 'sudo apt update' to check for updates"
+    print_success "  • Run 'sudo update-cursor' to download and install updates"
     print_success "  • Current version: $version"
     print_success ""
-    print_status "You can manually check for updates anytime by running: sudo update-cursor"
+    print_status "You can manually check for updates anytime by running: sudo check-cursor-update"
+    print_status "You can manually update anytime by running: sudo update-cursor"
 }
 
 # Run main function

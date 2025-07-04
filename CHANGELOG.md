@@ -5,6 +5,54 @@ All notable changes to the Cursor IDE Auto-Updater project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-07-04
+
+### Added
+
+-   New check-only script (`/usr/local/bin/check-cursor-update`) that checks for Cursor IDE updates without downloading or installing. This script is now run after every `apt update` (not `apt upgrade`), improving integration with standard Linux update workflows.
+-   Test coverage for the new check script in `test-installation.sh`.
+-   Uninstallation logic for the check script in `uninstall-cursor.sh`.
+
+### Changed
+
+-   The APT hook now runs the check-only script after `apt update` instead of running the updater after `apt upgrade`.
+-   The update process is now split: `sudo apt update` checks for updates, and `sudo update-cursor` performs the upgrade if a new version is available.
+-   Updated README.md to reflect the new update workflow, clarify the difference between checking for updates and upgrading, and document the new check script. Improved documentation for update and upgrade commands, and updated the list of installed components and features.
+-   The test script now checks for the presence and executability of the check script, and verifies that the APT hook references the correct script.
+-   Network connectivity tests in the test script now use the official Cursor API endpoint instead of GitHub.
+
+### Technical Details
+
+-   The core reason for this change: the previous approach using an APT hook after `apt upgrade` only triggered the Cursor update if there were other real APT package upgrades available. If there were no other packages to upgrade, the Cursor update would not occur, even if a new Cursor version was available. By switching to a hook after `apt update`, the check for Cursor updates always runs, ensuring users are notified of new versions regardless of other system package upgrades.
+-   The installer now creates the check-only script and ensures it is executable.
+-   The uninstaller removes the check-only script if present.
+-   The APT hook is updated to reference the check script and only runs after `apt update`.
+-   All scripts and documentation updated to reflect the new workflow and file locations.
+
+### File Structure
+
+```
+/opt/cursor-ai/
+├── cursor              # Main application binary
+├── cursor.png          # Application icon
+└── version.txt         # Version tracking
+
+/usr/local/bin/
+├── update-cursor           # Update script
+└── check-cursor-update     # Check for updates script
+
+/usr/share/applications/
+└── cursor.desktop      # Desktop entry
+
+/etc/apt/apt.conf.d/
+└── 99-cursor-update    # APT integration hook (now runs check script after apt update)
+```
+
+### Migration Notes
+
+-   Users should now run `sudo apt update` to check for updates and `sudo update-cursor` to upgrade Cursor IDE. The update will no longer happen automatically after `apt upgrade`.
+-   The new check script improves compatibility with standard Linux update practices and provides a safer, more predictable update experience.
+
 ## [1.0.0] - 2025-07-03
 
 ### Added

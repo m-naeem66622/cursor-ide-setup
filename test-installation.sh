@@ -17,6 +17,7 @@ CURSOR_DIR="/opt/cursor-ai"
 CURSOR_BINARY="$CURSOR_DIR/cursor"
 VERSION_FILE="$CURSOR_DIR/version.txt"
 UPDATER_SCRIPT="/usr/local/bin/update-cursor"
+CHECK_SCRIPT="/usr/local/bin/check-cursor-update"
 DESKTOP_FILE="/usr/share/applications/cursor.desktop"
 APT_HOOK="/etc/apt/apt.conf.d/99-cursor-update"
 
@@ -90,6 +91,23 @@ test_updater_script() {
     fi
 }
 
+test_check_script() {
+    print_test "Checking check script..."
+    
+    if [ -f "$CHECK_SCRIPT" ]; then
+        if [ -x "$CHECK_SCRIPT" ]; then
+            print_pass "Check script exists and is executable"
+            return 0
+        else
+            print_fail "Check script exists but is not executable"
+            return 1
+        fi
+    else
+        print_fail "Check script not found at $CHECK_SCRIPT"
+        return 1
+    fi
+}
+
 test_desktop_file() {
     print_test "Checking desktop file..."
     
@@ -113,11 +131,11 @@ test_apt_hook() {
     print_test "Checking APT hook..."
     
     if [ -f "$APT_HOOK" ]; then
-        if grep -q "update-cursor" "$APT_HOOK"; then
-            print_pass "APT hook exists and references updater script"
+        if grep -q "check-cursor-update" "$APT_HOOK"; then
+            print_pass "APT hook exists and references check script"
             return 0
         else
-            print_fail "APT hook exists but doesn't reference updater script"
+            print_fail "APT hook exists but doesn't reference check script"
             return 1
         fi
     else
@@ -155,12 +173,12 @@ test_updater_functionality() {
         return 1
     fi
     
-    # Test network connectivity to GitHub API
-    if curl -s "https://api.github.com/repos/getcursor/cursor/releases/latest" > /dev/null; then
-        print_pass "Network connectivity to GitHub API is working"
+    # Test network connectivity to Cursor API
+    if curl -s "https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable" > /dev/null; then
+        print_pass "Network connectivity to Cursor API is working"
         return 0
     else
-        print_warn "Cannot reach GitHub API (network issue or rate limit)"
+        print_warn "Cannot reach Cursor API (network issue)"
         return 1
     fi
 }
@@ -177,6 +195,7 @@ main() {
         "test_cursor_binary" 
         "test_version_file"
         "test_updater_script"
+        "test_check_script"
         "test_desktop_file"
         "test_apt_hook"
         "test_updater_functionality"
@@ -208,8 +227,8 @@ main() {
         echo
         print_test "You can now:"
         echo "  • Launch Cursor from your application menu"
-        echo "  • Run 'sudo apt upgrade' to test automatic updates"
-        echo "  • Run 'sudo update-cursor' to manually check for updates"
+        echo "  • Run 'sudo apt update' to check for updates"
+        echo "  • Run 'sudo update-cursor' to install updates"
         exit 0
     else
         print_fail "Some tests failed. Please check the installation."

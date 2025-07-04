@@ -15,54 +15,21 @@ cd cursor-ide-setup
 sudo ./install-cursor.sh
 ```
 
-**What happens during installation:**
+### Check for Updates & Upgrade
 
-```
-[Cursor Installer] Starting Cursor IDE installation with auto-updater...- Safe update process with backup/rollback
-[Cursor Installer] Step 1/8: Checking root privileges...
-[Cursor Installer] Root check passed
-[Cursor Installer] Step 2/8: Installing dependencies...
-[Cursor Installer] Checking dependencies...
-[Cursor Installer] All dependencies are already installed
-[Cursor Installer] Dependencies check completed
-[Cursor Installer] Step 3/8: Testing network connectivity...
-[Cursor Installer] Testing network connectivity...
-[Cursor Installer] Network connectivity test passed
-[Cursor Installer] Network test completed
-[Cursor Installer] Step 4/8: Fetching latest version information...
-[Cursor Installer] Latest version: 1.1.7
-[Cursor Installer] Step 5/8: Getting download URL...
-[Cursor Installer] Download URL obtained
-[Cursor Installer] Step 6/8: Setting up directory structure...
-[Cursor Installer] Creating Cursor directory at /opt/cursor-ai...
-[Cursor Installer] Created directory /opt/cursor-ai
-[Cursor Installer] Downloading Cursor 1.1.7...
---2025-07-03 18:35:56--  https://downloads.cursor.com/production/...
-[Cursor Installer] Cursor 1.1.7 installed successfully
-[Cursor Installer] Step 7/8: Creating desktop integration...
-[Cursor Installer] Desktop entry created at /usr/share/applications/cursor.desktop
-[Cursor Installer] Step 8/8: Setting up auto-updater...
-[Cursor Installer] Auto-updater configured
-[Cursor Installer] Installation complete!
-```
-
-### Automatic Updates
-
-From now on, whenever you update your system:
+To check for Cursor updates:
 
 ```bash
-sudo apt update && sudo apt upgrade
+sudo apt update
 ```
 
-You'll see Cursor updates automatically:
+To upgrade Cursor (if an update is available):
 
+```bash
+sudo update-cursor
 ```
-[Cursor Updater] Checking for Cursor updates...
-[Cursor Updater] Current version: v0.42.3
-[Cursor Updater] Latest version: v0.42.4
-[Cursor Updater] New version available: v0.42.3 → v0.42.4
-[Cursor Updater] Update complete! Cursor updated to v0.42.4
-```
+
+> **Note:** `sudo apt upgrade` does NOT upgrade Cursor automatically. You must run `sudo update-cursor` to perform the upgrade.
 
 ### Testing Installation
 
@@ -72,59 +39,22 @@ Verify everything works:
 ./test-installation.sh
 ```
 
-Expected output:
-
-```
-========================================
-  Cursor IDE Installation Test Suite
-========================================
-
-[Test] Checking dependencies...
-[PASS] All dependencies are installed: wget curl jq
-
-[Test] Checking Cursor binary...
-[PASS] Cursor binary exists and is executable
-
-[Test] Checking version file...
-[PASS] Version file exists with version: v0.42.3
-
-[Test] Checking updater script...
-[PASS] Updater script exists and is executable
-
-[Test] Checking desktop file...
-[PASS] Desktop file exists with correct content
-
-[Test] Checking APT hook...
-[PASS] APT hook exists and references updater script
-
-[Test] Testing updater functionality (dry run)...
-[PASS] Network connectivity to GitHub API is working
-
-========================================
-  Test Results
-========================================
-Total tests: 7
-Passed: 7
-Failed: 0
-
-[PASS] All tests passed! Cursor IDE is properly installed.
-```
-
 ## 📋 What Gets Installed
 
-| Component      | Location                                 | Purpose                              |
-| -------------- | ---------------------------------------- | ------------------------------------ |
-| Cursor IDE     | `/opt/cursor-ai/cursor`                  | The main application binary          |
-| Updater Script | `/usr/local/bin/update-cursor`           | Handles automatic updates            |
-| Desktop Entry  | `/usr/share/applications/cursor.desktop` | Makes Cursor appear in your app menu |
-| APT Hook       | `/etc/apt/apt.conf.d/99-cursor-update`   | Triggers updates after `apt upgrade` |
-| Version File   | `/opt/cursor-ai/version.txt`             | Tracks the installed version         |
+| Component      | Location                                 | Purpose                                |
+| -------------- | ---------------------------------------- | -------------------------------------- |
+| Cursor IDE     | `/opt/cursor-ai/cursor`                  | The main application binary            |
+| Updater Script | `/usr/local/bin/update-cursor`           | Downloads and installs updates         |
+| Check Script   | `/usr/local/bin/check-cursor-update`     | Checks for updates without downloading |
+| Desktop Entry  | `/usr/share/applications/cursor.desktop` | Makes Cursor appear in your app menu   |
+| APT Hook       | `/etc/apt/apt.conf.d/99-cursor-update`   | Triggers check after apt update        |
+| Version File   | `/opt/cursor-ai/version.txt`             | Tracks the installed version           |
 
 ## 🔧 Features
 
--   **One-time setup**: Install once, updates happen automatically
+-   **One-time setup**: Install once, then check for updates and upgrade as needed
 -   **Native feel**: Updates integrate with your system's package manager
--   **Safe updates**: Automatic backup and rollback on failure
+-   **Safe updates**: Backup previous version during update
 -   **Clean installation**: Follows Linux filesystem standards
 -   **Easy removal**: Complete uninstall script provided
 
@@ -147,8 +77,8 @@ The installer will:
 ### Daily Usage
 
 -   **Launch Cursor**: Open your application menu and search for "Cursor"
--   **Manual Update Check**: `sudo update-cursor`
--   **System Updates** (includes Cursor): `sudo apt update && sudo apt upgrade`
+-   **Check for updates**: `sudo apt update`
+-   **Upgrade Cursor**: `sudo update-cursor`
 
 ### Uninstallation
 
@@ -183,7 +113,7 @@ make help
 
 ### Auto-Update Process
 
-1. **Trigger**: Runs automatically after every `apt upgrade`
+1. **Trigger**: Runs automatically after every `sudo cursor-update`
 2. **Check**: Queries GitHub API for the latest version
 3. **Compare**: Compares with locally installed version
 4. **Update**: Downloads and installs new version if available
@@ -198,7 +128,8 @@ make help
 └── version.txt         # Current version info
 
 /usr/local/bin/
-└── update-cursor       # Auto-updater script
+├── update-cursor           # Update script
+└── check-cursor-update     # Check for updates script
 
 /usr/share/applications/
 └── cursor.desktop      # Desktop entry
@@ -247,8 +178,11 @@ sudo ./install-cursor.sh
 # Check installed version
 cat /opt/cursor-ai/version.txt
 
-# Check latest available version
-curl -s https://api.github.com/repos/getcursor/cursor/releases/latest | jq -r '.tag_name'
+# Check for updates (without downloading)
+sudo check-cursor-update
+
+# Check latest available version from API
+curl -s "https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable" | jq -r '.version'
 ```
 
 ### Logs

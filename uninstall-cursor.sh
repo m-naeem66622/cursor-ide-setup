@@ -17,6 +17,7 @@ NC='\033[0m'
 # Constants
 CURSOR_DIR="/opt/cursor-ai"
 UPDATER_SCRIPT="/usr/local/bin/update-cursor"
+CHECK_SCRIPT="/usr/local/bin/check-cursor-update"
 DESKTOP_FILE="/usr/share/applications/cursor.desktop"
 APT_HOOK="/etc/apt/apt.conf.d/99-cursor-update"
 
@@ -62,6 +63,14 @@ remove_files() {
         rm -f "$UPDATER_SCRIPT"
         removed_count=$((removed_count + 1))
         print_success "Updater script removed"
+    fi
+    
+    # Remove check script
+    if [ -f "$CHECK_SCRIPT" ]; then
+        print_status "Removing check script: $CHECK_SCRIPT"
+        rm -f "$CHECK_SCRIPT"
+        removed_count=$((removed_count + 1))
+        print_success "Check script removed"
     fi
     
     # Remove desktop file
