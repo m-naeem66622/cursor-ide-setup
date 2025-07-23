@@ -729,16 +729,28 @@ detect_and_fix_launch_issues() {
     # 3. Detect runtime sandbox failures and apply --no-sandbox fallback
     # ---------------------------------------------------------------------
     print_status "Verifying Cursor binary can run headless (sandbox check)..."
+
     local launch_output
-    if launch_output=$("$CURSOR_BINARY" --version 2>&1); then
+    local launch_status
+    if [ -n "$SUDO_USER" ] && command -v runuser >/dev/null 2>&1; then
+        # Run the version check as the original user instead of root to avoid
+        # Electron\'s "Running as root without --no-sandbox" fatal error.
+        launch_output=$(runuser -u "$SUDO_USER" -- "$CURSOR_BINARY" --version 2>&1)
+        launch_status=$?
+    else
+        launch_output=$("$CURSOR_BINARY" --version 2>&1)
+        launch_status=$?
+    fi
+
+    if [ $launch_status -eq 0 ]; then
         print_success "Cursor reported version successfully → sandbox OK"
     else
-        # Capture known sandbox error keywords
-        if echo "$launch_output" | grep -Eiq "setuid sandbox|Failed to move to new namespace|zygote_host_impl_linux|Check failed"; then
+        # Capture known sandbox error keywords (extended list)
+        if echo "$launch_output" | grep -Eiq "setuid sandbox|Failed to move to new namespace|zygote_host_impl_linux|Check failed|Running as root without --no-sandbox"; then
             print_warning "Sandbox-related launch issue detected"
             update_desktop_entry_no_sandbox
         else
-            print_warning "Cursor failed to run for an unknown reason. Skipping --no-sandbox workaround."
+            print_warning "Cursor failed to run (exit code $launch_status). Unknown reason; skipping --no-sandbox workaround."
         fi
     fi
 }
