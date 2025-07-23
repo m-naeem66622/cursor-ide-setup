@@ -731,18 +731,7 @@ detect_and_fix_launch_issues() {
     print_status "Verifying Cursor binary can run headless (sandbox check)..."
 
     local launch_output
-    local launch_status
-    if [ -n "$SUDO_USER" ] && command -v runuser >/dev/null 2>&1; then
-        # Run the version check as the original user instead of root to avoid
-        # Electron\'s "Running as root without --no-sandbox" fatal error.
-        launch_output=$(runuser -u "$SUDO_USER" -- "$CURSOR_BINARY" --version 2>&1)
-        launch_status=$?
-    else
-        launch_output=$("$CURSOR_BINARY" --version 2>&1)
-        launch_status=$?
-    fi
-
-    if [ $launch_status -eq 0 ]; then
+    if launch_output=$("$CURSOR_BINARY" --version 2>&1); then
         print_success "Cursor reported version successfully → sandbox OK"
     else
         # Capture known sandbox error keywords (extended list)
