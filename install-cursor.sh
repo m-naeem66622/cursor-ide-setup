@@ -669,6 +669,21 @@ test_connectivity() {
     print_success "Network connectivity test passed"
 }
 
+# Helper: add --no-sandbox flag to desktop entry if not already present
+update_desktop_entry_no_sandbox() {
+    if [[ -f "$DESKTOP_FILE" ]]; then
+        if grep -q "--no-sandbox" "$DESKTOP_FILE"; then
+            print_status "Desktop entry already contains --no-sandbox flag"
+        else
+            print_status "Adding --no-sandbox flag to desktop entry ($DESKTOP_FILE)"
+            sed -i "s|Exec=$CURSOR_BINARY|Exec=$CURSOR_BINARY --no-sandbox|g" "$DESKTOP_FILE"
+            print_success "Updated desktop entry with --no-sandbox flag"
+        fi
+    else
+        print_warning "Desktop entry not found yet – cannot apply --no-sandbox fix"
+    fi
+}
+
 # Detect and fix common launch issues that prevent the Cursor AppImage from
 # starting on some systems (missing FUSE library and sandbox namespace error).
 # This check is executed ONCE during installation so it has zero runtime cost
@@ -709,6 +724,23 @@ detect_and_fix_launch_issues() {
     else
         print_success "kernel.unprivileged_userns_clone already enabled – no action required"
     fi
+
+    # ---------------------------------------------------------------------
+    # 3. Detect runtime sandbox failures and apply --no-sandbox fallback
+    # ---------------------------------------------------------------------
+    print_status "Verifying Cursor binary can run headless (sandbox check)..."
+    local launch_output
+    if launch_output=$("$CURSOR_BINARY" --version 2>&1); then
+        print_success "Cursor reported version successfully → sandbox OK"
+    else
+        # Capture known sandbox error keywords
+        if echo "$launch_output" | grep -Eiq "setuid sandbox|Failed to move to new namespace|zygote_host_impl_linux|Check failed"; then
+            print_warning "Sandbox-related launch issue detected"
+            update_desktop_entry_no_sandbox
+        else
+            print_warning "Cursor failed to run for an unknown reason. Skipping --no-sandbox workaround."
+        fi
+    fi
 }
 
 # Main installation function
@@ -742,14 +774,14 @@ main() {
     download_cursor "$version" "$download_url"
     print_success "Cursor installation completed"
 
-    print_status "Step 7/9: Checking for launch issues (one-time)..."
+    print_status "Step 7/9: Creating desktop integration..."
+    create_desktop_entry
+    print_success "Desktop entry created"
+
+    print_status "Step 8/9: Checking for launch issues (one-time)..."
     detect_and_fix_launch_issues
     print_success "Launch issue check completed"
 
-    print_status "Step 8/9: Creating desktop integration..."
-    create_desktop_entry
-    print_success "Desktop entry created"
-    
     print_status "Step 9/9: Setting up auto-updater..."
     create_check_script
     create_updater_script
