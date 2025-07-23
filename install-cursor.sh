@@ -669,42 +669,88 @@ test_connectivity() {
     print_success "Network connectivity test passed"
 }
 
+# Detect and fix common launch issues that prevent the Cursor AppImage from
+# starting on some systems (missing FUSE library and sandbox namespace error).
+# This check is executed ONCE during installation so it has zero runtime cost
+# on every subsequent launch.
+detect_and_fix_launch_issues() {
+    print_status "Performing one-time check for common launch issues..."
+
+    # ---------------------------------------------------------------------
+    # 1. FUSE library missing (AppImage fails with: "dlopen(): error loading libfuse.so.2")
+    # ---------------------------------------------------------------------
+    if ! ldconfig -p | grep -q "libfuse\.so\.2"; then
+        print_warning "FUSE library (libfuse.so.2) not found. Installing libfuse2..."
+        # Refresh package lists in case they are stale
+        apt-get update -y
+        if apt-get install -y libfuse2 > /dev/null 2>&1; then
+            print_success "libfuse2 installed successfully"
+        else
+            print_error "Failed to install libfuse2 automatically. Please install it manually if the AppImage fails to start."
+        fi
+    else
+        print_success "FUSE library detected – no action required"
+    fi
+
+    # ---------------------------------------------------------------------
+    # 2. Sandbox namespace error (Electron fails with: "Failed to move to new namespace")
+    # ---------------------------------------------------------------------
+    local clone_flag
+    clone_flag=$(sysctl -n kernel.unprivileged_userns_clone 2>/dev/null || echo 1)
+    if [ "$clone_flag" = "0" ]; then
+        print_warning "kernel.unprivileged_userns_clone is disabled. Enabling to avoid Electron sandbox errors..."
+        if sysctl -w kernel.unprivileged_userns_clone=1 > /dev/null 2>&1; then
+            echo "kernel.unprivileged_userns_clone=1" > /etc/sysctl.d/60-cursor-unprivileged-userns.conf
+            sysctl --system > /dev/null 2>&1
+            print_success "Enabled unprivileged user namespace cloning"
+        else
+            print_error "Failed to modify kernel.unprivileged_userns_clone. You may need to enable it manually if Cursor fails to start."
+        fi
+    else
+        print_success "kernel.unprivileged_userns_clone already enabled – no action required"
+    fi
+}
+
 # Main installation function
 main() {
     print_status "Starting Cursor IDE installation with auto-updater..."
     
-    print_status "Step 1/8: Checking root privileges..."
+    print_status "Step 1/9: Checking root privileges..."
     check_root
     print_success "Root check passed"
     
-    print_status "Step 2/8: Installing dependencies..."
+    print_status "Step 2/9: Installing dependencies..."
     install_dependencies
     print_success "Dependencies check completed"
     
-    print_status "Step 3/8: Testing network connectivity..."
+    print_status "Step 3/9: Testing network connectivity..."
     test_connectivity
     print_success "Network test completed"
     
-    print_status "Step 4/8: Fetching latest version information..."
+    print_status "Step 4/9: Fetching latest version information..."
     local version
     version=$(get_latest_version)
     print_success "Latest version: $version"
     
-    print_status "Step 5/8: Getting download URL..."
+    print_status "Step 5/9: Getting download URL..."
     local download_url
     download_url=$(get_download_url)
     print_success "Download URL obtained"
     
-    print_status "Step 6/8: Setting up directory structure..."
+    print_status "Step 6/9: Setting up directory structure..."
     create_cursor_directory
     download_cursor "$version" "$download_url"
     print_success "Cursor installation completed"
-    
-    print_status "Step 7/8: Creating desktop integration..."
+
+    print_status "Step 7/9: Checking for launch issues (one-time)..."
+    detect_and_fix_launch_issues
+    print_success "Launch issue check completed"
+
+    print_status "Step 8/9: Creating desktop integration..."
     create_desktop_entry
     print_success "Desktop entry created"
     
-    print_status "Step 8/8: Setting up auto-updater..."
+    print_status "Step 9/9: Setting up auto-updater..."
     create_check_script
     create_updater_script
     create_apt_hook
