@@ -21,8 +21,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Constants
-CURSOR_DIR="/opt/cursor-ai"
-CURSOR_BINARY="$CURSOR_DIR/cursor"
+CURSOR_DIR="/usr/local/share/cursor-ai"
+CURSOR_BINARY="/usr/local/bin/cursor"
 VERSION_FILE="$CURSOR_DIR/version.txt"
 UPDATER_SCRIPT="/usr/local/bin/update-cursor"
 DESKTOP_FILE="/usr/share/applications/cursor.desktop"
@@ -306,8 +306,8 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Constants
-CURSOR_DIR="/opt/cursor-ai"
-CURSOR_BINARY="$CURSOR_DIR/cursor"
+CURSOR_DIR="/usr/local/share/cursor-ai"
+CURSOR_BINARY="/usr/local/bin/cursor"
 VERSION_FILE="$CURSOR_DIR/version.txt"
 
 # Cursor download URLs (from their official API)
@@ -443,8 +443,8 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Constants
-CURSOR_DIR="/opt/cursor-ai"
-CURSOR_BINARY="$CURSOR_DIR/cursor"
+CURSOR_DIR="/usr/local/share/cursor-ai"
+CURSOR_BINARY="/usr/local/bin/cursor"
 VERSION_FILE="$CURSOR_DIR/version.txt"
 
 # Cursor download URLs (from their official API)
