@@ -15,7 +15,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Constants
-CURSOR_DIR="/opt/cursor-ai"
+CURSOR_DIR="/usr/local/share/cursor-ai"
 UPDATER_SCRIPT="/usr/local/bin/update-cursor"
 CHECK_SCRIPT="/usr/local/bin/check-cursor-update"
 DESKTOP_FILE="/usr/share/applications/cursor.desktop"
@@ -56,6 +56,14 @@ remove_files() {
         rm -rf "$CURSOR_DIR"
         removed_count=$((removed_count + 1))
         print_success "Cursor directory removed"
+    fi
+    
+    # Remove Cursor binary
+    if [ -f "/usr/local/bin/cursor" ]; then
+        print_status "Removing Cursor binary: /usr/local/bin/cursor"
+        rm -f "/usr/local/bin/cursor"
+        removed_count=$((removed_count + 1))
+        print_success "Cursor binary removed"
     fi
     
     # Remove updater script

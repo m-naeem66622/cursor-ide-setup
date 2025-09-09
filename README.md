@@ -43,13 +43,13 @@ Verify everything works:
 
 | Component      | Location                                           | Purpose                                |
 | -------------- | -------------------------------------------------- | -------------------------------------- |
-| Cursor IDE     | `/opt/cursor-ai/cursor`                            | The main application binary (AppImage) |
+| Cursor IDE     | `/usr/local/bin/cursor`                            | The main application binary (AppImage) |
 | Updater Script | `/usr/local/bin/update-cursor`                     | Downloads and installs updates         |
 | Check Script   | `/usr/local/bin/check-cursor-update`               | Checks for updates without downloading |
 | Desktop Entry  | `/usr/share/applications/cursor.desktop`           | Makes Cursor appear in your app menu   |
 | APT Hook       | `/etc/apt/apt.conf.d/99-cursor-update`             | Triggers check after apt update        |
-| Version File   | `/opt/cursor-ai/version.txt`                       | Tracks the installed version           |
-| Icon File      | `/opt/cursor-ai/cursor.png`                        | Application icon for desktop entry     |
+| Version File   | `/usr/local/share/cursor-ai/version.txt`           | Tracks the installed version           |
+| Icon File      | `/usr/local/share/cursor-ai/cursor.png`            | Application icon for desktop entry     |
 | System Config  | `/etc/sysctl.d/60-cursor-unprivileged-userns.conf` | Kernel config (created only if needed) |
 
 ## 🔧 Features
@@ -74,7 +74,7 @@ The installer will:
 
 1. Check and install dependencies (`wget`, `curl`, `jq`)
 2. Download the latest Cursor IDE from Cursor's official API
-3. Set up the application in `/opt/cursor-ai/`
+3. Set up the application in `/usr/local/share/cursor-ai/` and `/usr/local/bin/`
 4. Create a desktop entry for your app menu
 5. Detect and fix common launch issues (FUSE library, sandbox errors)
 6. Install the auto-updater system
@@ -128,9 +128,12 @@ make help
 ### File Structure
 
 ```
-/opt/cursor-ai/
-├── cursor              # Main application binary (AppImage)
+/usr/local/share/cursor-ai/
 ├── cursor.png          # Application icon
+└── version.txt         # Version tracking file
+
+/usr/local/bin/
+└── cursor              # Main application binary (AppImage)
 └── version.txt         # Current version info
 
 /usr/local/bin/
@@ -218,7 +221,7 @@ sudo ./install-cursor.sh
 
 ```bash
 # Check installed version
-cat /opt/cursor-ai/version.txt
+cat /usr/local/share/cursor-ai/version.txt
 
 # Check for updates (without downloading)
 sudo check-cursor-update
@@ -270,8 +273,15 @@ sudo ./install-cursor.sh  # Will recreate the APT hook
 Edit the `CURSOR_DIR` variable in `install-cursor.sh` before running:
 
 ```bash
-# Change this line in install-cursor.sh
-CURSOR_DIR="/your/custom/path"
+# Change these lines in install-cursor.sh
+CURSOR_DIR="/your/custom/data/path"
+CURSOR_BINARY="/your/custom/bin/path/cursor"
+```
+
+Or modify the `config.conf` file:
+
+```bash
+CURSOR_INSTALL_DIR="/your/custom/data/path"
 ```
 
 ### Project Structure

@@ -5,6 +5,37 @@ All notable changes to the Cursor IDE Auto-Updater project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - Directory Structure Reorganization
+
+### Changed
+
+- **BREAKING CHANGE**: Moved installation directory from `/opt/cursor-ai/` to `/usr/local/share/cursor-ai/`
+- **BREAKING CHANGE**: Moved binary from `/opt/cursor-ai/cursor` to `/usr/local/bin/cursor`
+- Updated all scripts to use the new directory structure
+- Updated configuration files and documentation
+
+### Benefits
+
+- Follows Linux Filesystem Hierarchy Standard (FHS) more closely
+- Reduces permission issues that occurred with `/opt/cursor` directory usage
+- Separates binary files from data files appropriately
+- Safer installation location that doesn't require special root directory handling
+
+### Technical Details
+
+- Installs to `/usr/local/share/cursor-ai/` and `/usr/local/bin/` following Linux standards
+
+### File Structure
+
+```
+/usr/local/share/cursor-ai/
+├── cursor.png          # Application icon
+└── version.txt         # Version tracking file
+
+/usr/local/bin/
+└── cursor              # Main application binary (AppImage)
+```
+
 ## [1.0.3] - 2025-01-27
 
 ### Fixed
