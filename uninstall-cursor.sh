@@ -20,6 +20,7 @@ UPDATER_SCRIPT="/usr/local/bin/update-cursor"
 CHECK_SCRIPT="/usr/local/bin/check-cursor-update"
 DESKTOP_FILE="/usr/share/applications/cursor.desktop"
 APT_HOOK="/etc/apt/apt.conf.d/99-cursor-update"
+SYSCTL_CONFIG="/etc/sysctl.d/60-cursor-unprivileged-userns.conf"
 
 print_status() {
     echo -e "${BLUE}[Cursor Uninstaller]${NC} $1"
@@ -87,6 +88,21 @@ remove_files() {
         rm -f "$APT_HOOK"
         removed_count=$((removed_count + 1))
         print_success "APT hook removed"
+    fi
+    
+    # Remove sysctl configuration (if it exists)
+    if [ -f "$SYSCTL_CONFIG" ]; then
+        print_status "Removing sysctl configuration: $SYSCTL_CONFIG"
+        rm -f "$SYSCTL_CONFIG"
+        removed_count=$((removed_count + 1))
+        print_success "Sysctl configuration removed"
+        
+        # Reload sysctl to apply changes
+        if command -v sysctl &> /dev/null; then
+            print_status "Reloading sysctl configuration..."
+            sysctl --system > /dev/null 2>&1 || true
+            print_success "Sysctl configuration reloaded"
+        fi
     fi
     
     if [ $removed_count -eq 0 ]; then

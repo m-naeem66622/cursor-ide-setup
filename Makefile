@@ -10,12 +10,14 @@ help:
 	@echo "  install    - Install Cursor IDE with auto-updater (requires sudo)"
 	@echo "  uninstall  - Remove Cursor IDE and all components (requires sudo)"
 	@echo "  test       - Test the installation"
+	@echo "  debug      - Run debug installation check (requires sudo)"
 	@echo "  clean      - Clean up any temporary files"
 	@echo "  help       - Show this help message"
 	@echo ""
 	@echo "Usage examples:"
 	@echo "  sudo make install    # Install Cursor IDE"
 	@echo "  make test           # Test installation (no sudo needed)"
+	@echo "  sudo make debug     # Debug installation issues"
 	@echo "  sudo make uninstall # Remove Cursor IDE"
 
 install:
@@ -58,3 +60,12 @@ permissions:
 	@echo "Setting correct permissions..."
 	chmod +x *.sh
 	@echo "Permissions set"
+
+debug:
+	@echo "Running debug installation check..."
+	@if [ "$$(id -u)" != "0" ]; then \
+		echo "Error: Debug target requires sudo privileges"; \
+		echo "Run: sudo make debug"; \
+		exit 1; \
+	fi
+	./debug-install.sh
