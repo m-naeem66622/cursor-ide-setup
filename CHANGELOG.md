@@ -5,6 +5,34 @@ All notable changes to the Cursor IDE Auto-Updater project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2025-01-27
+
+### Fixed
+
+- **Critical synchronization issue**: Added missing cleanup for system configuration file (`/etc/sysctl.d/60-cursor-unprivileged-userns.conf`) in uninstall script
+- Uninstall script now properly removes all files created during installation, ensuring complete cleanup
+- Added automatic sysctl configuration reload during uninstallation to apply kernel parameter changes
+
+### Improved
+
+- Enhanced uninstall script with comprehensive file removal tracking and status reporting
+- Updated documentation to reflect all installed components including conditional system configuration files
+- Improved project structure documentation with complete file listings and purposes
+
+### Documentation
+
+- Updated README.md with latest features, file structure, and troubleshooting information
+- Added debug script documentation and usage instructions
+- Enhanced troubleshooting section with specific solutions for FUSE and sandbox errors
+- Added configuration file documentation and advanced usage examples
+- Updated installation process documentation to include launch issue detection
+
+### Technical Details
+
+- The uninstall script now includes cleanup for the sysctl configuration file that is conditionally created during installation
+- Added proper error handling and system configuration reload to ensure clean removal
+- Improved synchronization between installation and uninstallation processes
+
 ## [1.0.2] - 2025-07-23
 
 ### Added
@@ -45,6 +73,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Proper privilege handling during user context switching for version checks
 - Safe kernel parameter modification with system-wide persistence
 
+### File Structure
+
+/etc/sysctl.d/
+└── 60-cursor-unprivileged-userns.conf # Kernel config (created only if needed)
+
 ## [1.0.1] - 2025-07-04
 
 ### Added
@@ -73,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ```
 /opt/cursor-ai/
-├── cursor              # Main application binary
+├── cursor              # Main application binary (AppImage)
 ├── cursor.png          # Application icon
 └── version.txt         # Version tracking
 
@@ -85,7 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 └── cursor.desktop      # Desktop entry
 
 /etc/apt/apt.conf.d/
-└── 99-cursor-update    # APT integration hook (now runs check script after apt update)
+└── 99-cursor-update    # APT integration hook (runs check script after apt update)
 ```
 
 ### Migration Notes
