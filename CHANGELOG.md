@@ -5,29 +5,69 @@ All notable changes to the Cursor IDE Auto-Updater project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-07-23
+
+### Added
+
+- Comprehensive launch issue detection and resolution system during installation to prevent common AppImage startup failures
+- Helper function `update_desktop_entry_no_sandbox()` to automatically add `--no-sandbox` flag to desktop entries when needed
+- Enhanced sandbox error detection with expanded keyword matching for better troubleshooting
+- Automatic FUSE library installation (`libfuse2`) when missing to support AppImage execution
+- Kernel parameter adjustment for unprivileged user namespace cloning to resolve Electron sandbox errors
+
+### Changed
+
+- Improved installation workflow with reordered steps: desktop entry creation now occurs before launch issue detection to enable proper `--no-sandbox` flag application
+- Enhanced sandbox detection logic to run version checks as the original user when using sudo, preventing "Running as root without --no-sandbox" errors
+- Streamlined version check logic by removing conditional execution complexity while maintaining headless verification functionality
+- Updated warning messages to include exit codes for better diagnostic information
+- Expanded list of known sandbox error keywords including "Running as root without --no-sandbox" for more comprehensive error handling
+
+### Fixed
+
+- Resolved AppImage launch failures on systems missing FUSE library support
+- Fixed sandbox namespace errors that prevented Cursor from starting on certain Linux configurations
+- Corrected root execution issues during version checks by implementing proper user context switching
+- Improved error handling for launch issues while preserving existing diagnostic capabilities
+
+### Technical Details
+
+- The installation script now performs a one-time comprehensive check for common launch issues, eliminating runtime costs on subsequent launches
+- Added automatic detection and installation of `libfuse2` when not present in the system
+- Implemented kernel parameter modification (`kernel.unprivileged_userns_clone=1`) with persistent configuration via `/etc/sysctl.d/60-cursor-unprivileged-userns.conf`
+- Enhanced sandbox detection uses `runuser` to execute version checks as the original user when running under sudo
+- Desktop entry modification logic ensures `--no-sandbox` flag is only added when necessary and not duplicated
+- Improved error pattern matching covers a broader range of Electron/Chromium sandbox-related failures
+
+### Security
+
+- Maintained secure installation practices while adding necessary workarounds for sandbox restrictions
+- Proper privilege handling during user context switching for version checks
+- Safe kernel parameter modification with system-wide persistence
+
 ## [1.0.1] - 2025-07-04
 
 ### Added
 
--   New check-only script (`/usr/local/bin/check-cursor-update`) that checks for Cursor IDE updates without downloading or installing. This script is now run after every `apt update` (not `apt upgrade`), improving integration with standard Linux update workflows.
--   Test coverage for the new check script in `test-installation.sh`.
--   Uninstallation logic for the check script in `uninstall-cursor.sh`.
+- New check-only script (`/usr/local/bin/check-cursor-update`) that checks for Cursor IDE updates without downloading or installing. This script is now run after every `apt update` (not `apt upgrade`), improving integration with standard Linux update workflows.
+- Test coverage for the new check script in `test-installation.sh`.
+- Uninstallation logic for the check script in `uninstall-cursor.sh`.
 
 ### Changed
 
--   The APT hook now runs the check-only script after `apt update` instead of running the updater after `apt upgrade`.
--   The update process is now split: `sudo apt update` checks for updates, and `sudo update-cursor` performs the upgrade if a new version is available.
--   Updated README.md to reflect the new update workflow, clarify the difference between checking for updates and upgrading, and document the new check script. Improved documentation for update and upgrade commands, and updated the list of installed components and features.
--   The test script now checks for the presence and executability of the check script, and verifies that the APT hook references the correct script.
--   Network connectivity tests in the test script now use the official Cursor API endpoint instead of GitHub.
+- The APT hook now runs the check-only script after `apt update` instead of running the updater after `apt upgrade`.
+- The update process is now split: `sudo apt update` checks for updates, and `sudo update-cursor` performs the upgrade if a new version is available.
+- Updated README.md to reflect the new update workflow, clarify the difference between checking for updates and upgrading, and document the new check script. Improved documentation for update and upgrade commands, and updated the list of installed components and features.
+- The test script now checks for the presence and executability of the check script, and verifies that the APT hook references the correct script.
+- Network connectivity tests in the test script now use the official Cursor API endpoint instead of GitHub.
 
 ### Technical Details
 
--   The core reason for this change: the previous approach using an APT hook after `apt upgrade` only triggered the Cursor update if there were other real APT package upgrades available. If there were no other packages to upgrade, the Cursor update would not occur, even if a new Cursor version was available. By switching to a hook after `apt update`, the check for Cursor updates always runs, ensuring users are notified of new versions regardless of other system package upgrades.
--   The installer now creates the check-only script and ensures it is executable.
--   The uninstaller removes the check-only script if present.
--   The APT hook is updated to reference the check script and only runs after `apt update`.
--   All scripts and documentation updated to reflect the new workflow and file locations.
+- The core reason for this change: the previous approach using an APT hook after `apt upgrade` only triggered the Cursor update if there were other real APT package upgrades available. If there were no other packages to upgrade, the Cursor update would not occur, even if a new Cursor version was available. By switching to a hook after `apt update`, the check for Cursor updates always runs, ensuring users are notified of new versions regardless of other system package upgrades.
+- The installer now creates the check-only script and ensures it is executable.
+- The uninstaller removes the check-only script if present.
+- The APT hook is updated to reference the check script and only runs after `apt update`.
+- All scripts and documentation updated to reflect the new workflow and file locations.
 
 ### File Structure
 
@@ -50,49 +90,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Migration Notes
 
--   Users should now run `sudo apt update` to check for updates and `sudo update-cursor` to upgrade Cursor IDE. The update will no longer happen automatically after `apt upgrade`.
--   The new check script improves compatibility with standard Linux update practices and provides a safer, more predictable update experience.
+- Users should now run `sudo apt update` to check for updates and `sudo update-cursor` to upgrade Cursor IDE. The update will no longer happen automatically after `apt upgrade`.
+- The new check script improves compatibility with standard Linux update practices and provides a safer, more predictable update experience.
 
 ## [1.0.0] - 2025-07-03
 
 ### Added
 
--   Initial release of Cursor IDE Auto-Updater
--   Main installer script (`install-cursor.sh`) with official Cursor API integration
--   Auto-updater script that integrates with APT using `https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable`
--   Desktop entry creation for application menu integration
--   Uninstaller script for clean removal
--   Test script to validate installation
--   Comprehensive README with usage instructions
--   Makefile for easy project management
--   Automatic backup and rollback functionality
--   Colored terminal output for better user experience
--   Network error handling and graceful fallbacks
--   Official Cursor API integration for version checking and downloads
--   Linux filesystem standard compliance
+- Initial release of Cursor IDE Auto-Updater
+- Main installer script (`install-cursor.sh`) with official Cursor API integration
+- Auto-updater script that integrates with APT using `https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable`
+- Desktop entry creation for application menu integration
+- Uninstaller script for clean removal
+- Test script to validate installation
+- Comprehensive README with usage instructions
+- Makefile for easy project management
+- Automatic backup and rollback functionality
+- Colored terminal output for better user experience
+- Network error handling and graceful fallbacks
+- Official Cursor API integration for version checking and downloads
+- Linux filesystem standard compliance
 
 ### Features
 
--   One-time installation with automatic updates
--   Updates triggered by `sudo apt upgrade`
--   Safe update process with backup/rollback
--   Desktop integration (app menu entry)
--   Version tracking and comparison using Cursor's official API
--   Network connectivity checks for Cursor services
--   Dependency management (wget, curl, jq)
--   Clean uninstallation option
--   Installation validation testing
+- One-time installation with automatic updates
+- Updates triggered by `sudo apt upgrade`
+- Safe update process with backup/rollback
+- Desktop integration (app menu entry)
+- Version tracking and comparison using Cursor's official API
+- Network connectivity checks for Cursor services
+- Dependency management (wget, curl, jq)
+- Clean uninstallation option
+- Installation validation testing
 
 ### Technical Details
 
--   Installs to `/opt/cursor-ai/` following Linux standards
--   Creates APT hook in `/etc/apt/apt.conf.d/`
--   Updater script in `/usr/local/bin/`
--   Desktop entry in `/usr/share/applications/`
--   Official Cursor API integration for releases
--   AppImage format support
--   Root privilege validation
--   Error handling and user feedback
+- Installs to `/opt/cursor-ai/` following Linux standards
+- Creates APT hook in `/etc/apt/apt.conf.d/`
+- Updater script in `/usr/local/bin/`
+- Desktop entry in `/usr/share/applications/`
+- Official Cursor API integration for releases
+- AppImage format support
+- Root privilege validation
+- Error handling and user feedback
 
 ### File Structure
 
@@ -114,18 +154,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
--   All operations require root privileges
--   Safe file handling with backup creation
--   Network request validation
--   Input sanitization for version strings
--   Graceful error handling without system damage
+- All operations require root privileges
+- Safe file handling with backup creation
+- Network request validation
+- Input sanitization for version strings
+- Graceful error handling without system damage
 
 ### Compatibility
 
--   Tested on Ubuntu/Debian-based systems
--   Requires APT package manager
--   Works with systemd and traditional init systems
--   Compatible with GNOME, KDE, and other desktop environments
+- Tested on Ubuntu/Debian-based systems
+- Requires APT package manager
+- Works with systemd and traditional init systems
+- Compatible with GNOME, KDE, and other desktop environments
 
 ---
 
@@ -133,21 +173,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [1.1.0] - Future
 
--   Support for other Linux distributions (Fedora, Arch, etc.)
--   Configuration file for custom settings
--   Logging system for update history
--   Update notifications for desktop environments
--   Scheduled update checks (independent of APT)
--   Multiple installation locations support
+- Support for other Linux distributions (Fedora, Arch, etc.)
+- Configuration file for custom settings
+- Logging system for update history
+- Update notifications for desktop environments
+- Scheduled update checks (independent of APT)
+- Multiple installation locations support
 
 ### [1.2.0] - Future
 
--   GUI installer option
--   Update rollback functionality
--   Differential updates for faster downloads
--   Proxy support for corporate environments
--   Custom GitHub repository support
--   Beta/stable channel selection
+- GUI installer option
+- Update rollback functionality
+- Differential updates for faster downloads
+- Proxy support for corporate environments
+- Custom GitHub repository support
+- Beta/stable channel selection
 
 ---
 
@@ -163,8 +203,8 @@ To contribute to this project:
 
 ### Development Guidelines
 
--   Follow bash best practices
--   Add error handling for all operations
--   Test on multiple Linux distributions
--   Document all user-facing changes
--   Maintain backward compatibility when possible
+- Follow bash best practices
+- Add error handling for all operations
+- Test on multiple Linux distributions
+- Document all user-facing changes
+- Maintain backward compatibility when possible
