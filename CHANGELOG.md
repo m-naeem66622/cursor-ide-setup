@@ -2,8 +2,76 @@
 
 All notable changes to the Cursor IDE Auto-Updater project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.5] - Cursor API Migration & Compatibility Update
+
+### Changed
+
+- **BREAKING CHANGE**: Migrated from deprecated Cursor JSON API endpoints to HTML parsing method
+- Updated download URL extraction to parse AppImage URLs directly from `https://cursor.com/download` page
+- Replaced JSON API calls (`cursor.com/api/download`) with HTML content parsing using `grep` and `sed`
+- Updated version detection to extract version numbers from AppImage filename patterns
+- Modified all API-dependent functions in installation, update, and check scripts
+
+### Fixed
+
+- **Critical API compatibility issue**: Resolved "Failed to parse version/download URL from API response" errors
+- Fixed installation script failures due to Cursor's API endpoint changes
+- Restored functionality for both x64 and arm64 architecture support
+- Fixed debug script to properly validate download URLs and version extraction
+- Resolved update checker and auto-updater scripts that were broken by API changes
+
+### Technical Details
+
+- **API Migration**: Replaced `jq` JSON parsing with `grep -o` HTML pattern matching
+- **URL Pattern**: Updated to extract URLs matching `https://downloads.cursor.com[^"]*{x86_64|aarch64}\.AppImage`
+- **Version Extraction**: Now parses version from AppImage filename pattern `Cursor-[version]-`
+- **Architecture Detection**: Enhanced support for both `x86_64` and `aarch64` AppImage variants
+- **Error Handling**: Improved error messages to reflect new parsing method
+
+### Script Updates
+
+#### Main Installation Script (`install-cursor.sh`)
+
+- Updated `get_latest_version()` function to parse HTML instead of JSON
+- Modified `get_download_url()` function with HTML pattern matching
+- Removed dependency on JSON API endpoints
+- Enhanced architecture-specific URL extraction
+
+#### Debug Script (`debug-install.sh`)
+
+- Migrated from JSON API testing to HTML parsing validation
+- Updated URL accessibility tests for both architectures
+- Enhanced diagnostic output with truncated URLs for better readability
+- Fixed version and download URL parsing validation
+
+#### Auto-Update Components
+
+- **Check Script**: Updated `get_latest_cursor_version()` in generated check script
+- **Updater Script**: Modified `get_download_url()` and `get_latest_cursor_version()` functions
+- **APT Integration**: Maintained compatibility with APT hooks and update mechanisms
+
+### Compatibility
+
+- **Backward Compatible**: No changes to installation directory structure or user-facing commands
+- **Forward Compatible**: New parsing method is more resilient to future website changes
+- **Multi-Architecture**: Continued support for x64 and arm64 systems
+- **Dependency Management**: Maintains existing dependency requirements (wget, curl, jq)
+
+### Validation
+
+- Successfully tested with Cursor version 1.6.35
+- Verified AppImage download accessibility for both architectures
+- Confirmed proper version extraction and URL parsing
+- Validated complete installation and update workflow
+
+### Migration Notes
+
+- **No User Action Required**: Existing installations will automatically use new API method on next update check
+- **Immediate Fix**: Resolves current installation failures without reinstallation
+- **API Resilience**: Less dependent on specific API endpoint availability
 
 ## [1.0.4] - Directory Structure Reorganization
 
