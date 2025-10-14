@@ -114,7 +114,7 @@ test_desktop_file() {
     if [ -f "$DESKTOP_FILE" ]; then
         # Check if it has the required fields
         if grep -q "Name=Cursor" "$DESKTOP_FILE" && \
-           grep -q "Exec=$CURSOR_BINARY" "$DESKTOP_FILE"; then
+           grep -Eq "^Exec=$CURSOR_BINARY( --no-sandbox)?$" "$DESKTOP_FILE"; then
             print_pass "Desktop file exists with correct content"
             return 0
         else
@@ -173,14 +173,21 @@ test_updater_functionality() {
         return 1
     fi
     
-    # Test network connectivity to Cursor API
-    if curl -s "https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable" > /dev/null; then
+    # Test network connectivity to Cursor API (x64)
+    if curl -fsS "https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable" > /dev/null; then
         print_pass "Network connectivity to Cursor API is working"
-        return 0
     else
         print_warn "Cannot reach Cursor API (network issue)"
-        return 1
     fi
+
+    # Test arm64 as well (not fatal if fails)
+    if curl -fsS "https://cursor.com/api/download?platform=linux-arm64&releaseTrack=stable" > /dev/null; then
+        print_pass "Network connectivity to Cursor API (arm64) is working"
+    else
+        print_warn "Cannot reach Cursor API for arm64 (may be network specific)"
+    fi
+
+    return 0
 }
 
 # Main test function

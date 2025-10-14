@@ -57,85 +57,44 @@ debug_installation() {
         return 1
     fi
     
-    # Test Cursor website connectivity
-    print_debug "Testing Cursor website connectivity..."
-    if curl -s --connect-timeout 5 "https://cursor.com" > /dev/null; then
-        print_success "Cursor website connectivity: OK"
-    else
-        print_error "Cursor website connectivity: FAILED"
-        return 1
-    fi
-    
-    # Test Cursor download page for downloads
-    print_debug "Testing Cursor download page..."
-    local CURSOR_DOWNLOAD_PAGE="https://cursor.com/download"
-    
-    # Test x64 download URL
-    print_debug "Testing x64 download URL..."
-    local response
-    if response=$(curl -s --connect-timeout 10 "$CURSOR_DOWNLOAD_PAGE" 2>&1); then
-        print_success "x64 download page response received"
-        
-        # Try to parse x64 AppImage URL from HTML
-        local version=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*x86_64\.AppImage' | head -1 | grep -o 'Cursor-[0-9][^-]*' | sed 's/Cursor-//' 2>/dev/null)
-        local download_url=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*x86_64\.AppImage' | head -1 2>/dev/null)
-        
-        if [ -n "$version" ]; then
-            print_success "x64 version: $version"
-        else
-            print_error "Could not parse version from x64 response"
+    # Test Cursor API connectivity and URLs
+    print_debug "Testing Cursor API (stable track)..."
+    local base_api="https://cursor.com/api/download"
+
+    # Helper to test a platform via API
+    test_platform_api() {
+        local platform="$1"
+        print_debug "Testing platform: $platform"
+        local json
+        if ! json=$(curl -fsSL --connect-timeout 10 "${base_api}?platform=${platform}&releaseTrack=stable" 2>&1); then
+            print_error "API request failed for ${platform}"
+            print_debug "curl error: $json"
+            return 1
         fi
-        
-        if [ -n "$download_url" ]; then
-            print_success "x64 download URL found"
-            print_debug "x64 URL: ${download_url:0:60}..."
-            
-            # Test the actual download URL
-            if curl -s -I --connect-timeout 10 "$download_url" | head -1 | grep -q "200"; then
-                print_success "x64 AppImage file is accessible"
-            else
-                print_error "x64 AppImage file is not accessible"
-            fi
+        local version
+        local url
+        version=$(echo "$json" | jq -r '.version // empty')
+        url=$(echo "$json" | jq -r '.downloadUrl // empty')
+        if [ -z "$version" ]; then
+            print_error "Missing version in API response for ${platform}"
         else
-            print_error "Could not parse download URL from x64 response"
+            print_success "${platform} version: $version"
         fi
-    else
-        print_error "Failed to fetch x64 download page response"
-        print_debug "curl error: $response"
-    fi
-    
-    # Test arm64 download URL  
-    print_debug "Testing arm64 download URL..."
-    if response=$(curl -s --connect-timeout 10 "$CURSOR_DOWNLOAD_PAGE" 2>&1); then
-        print_success "arm64 download page response received"
-        
-        # Try to parse arm64 AppImage URL from HTML
-        local version=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*aarch64\.AppImage' | head -1 | grep -o 'Cursor-[0-9][^-]*' | sed 's/Cursor-//' 2>/dev/null)
-        local download_url=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*aarch64\.AppImage' | head -1 2>/dev/null)
-        
-        if [ -n "$version" ]; then
-            print_success "arm64 version: $version"
+        if [ -z "$url" ]; then
+            print_error "Missing downloadUrl in API response for ${platform}"
+            return 1
+        fi
+        print_success "${platform} download URL received"
+        print_debug "${platform} URL: ${url:0:80}..."
+        if curl -s -I --connect-timeout 10 "$url" | head -1 | grep -q "200"; then
+            print_success "${platform} AppImage is accessible"
         else
-            print_error "Could not parse version from arm64 response"
+            print_error "${platform} AppImage not accessible"
         fi
-        
-        if [ -n "$download_url" ]; then
-            print_success "arm64 download URL found"
-            print_debug "arm64 URL: ${download_url:0:60}..."
-            
-            # Test the actual download URL
-            if curl -s -I --connect-timeout 10 "$download_url" | head -1 | grep -q "200"; then
-                print_success "arm64 AppImage file is accessible"
-            else
-                print_error "arm64 AppImage file is not accessible"
-            fi
-        else
-            print_error "Could not parse download URL from arm64 response"
-        fi
-    else
-        print_error "Failed to fetch arm64 download page response"
-        print_debug "curl error: $response"
-    fi
+    }
+
+    test_platform_api "linux-x64"
+    test_platform_api "linux-arm64"
     
     print_success "Debug check completed successfully"
 }

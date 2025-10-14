@@ -101,57 +101,59 @@ detect_architecture() {
     esac
 }
 
-# Get the latest Cursor version from the download page
-get_latest_version() {
-    local response
-    response=$(curl -s "$CURSOR_DOWNLOAD_PAGE" 2>/dev/null)
-    if [ $? -ne 0 ]; then
-        print_error "Failed to fetch version information from Cursor download page"
-        exit 1
-    fi
-    
-    # Extract version from AppImage URL pattern
-    local version
-    version=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*x86_64\.AppImage' | head -1 | grep -o 'Cursor-[0-9][^-]*' | sed 's/Cursor-//' 2>/dev/null)
-    if [ -z "$version" ]; then
-        print_error "Failed to parse version from download page"
-        exit 1
-    fi
-    
-    echo "$version"
-}
-
-# Get download URL based on architecture
-get_download_url() {
+# Map to Cursor API platform string
+get_api_platform() {
     local arch
     arch=$(detect_architecture)
-    
-    local response
-    response=$(curl -s "$CURSOR_DOWNLOAD_PAGE" 2>/dev/null)
-    if [ $? -ne 0 ]; then
-        print_error "Failed to fetch download information from Cursor download page"
-        exit 1
-    fi
-    
-    local download_url
     case "$arch" in
         x64)
-            download_url=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*x86_64\.AppImage' | head -1 2>/dev/null)
+            echo "linux-x64"
             ;;
         arm64)
-            download_url=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*aarch64\.AppImage' | head -1 2>/dev/null)
+            echo "linux-arm64"
             ;;
         *)
-            print_error "Unsupported architecture: $arch"
+            print_error "Unsupported architecture mapping for API platform: $arch"
             exit 1
             ;;
     esac
-    
-    if [ -z "$download_url" ]; then
-        print_error "Failed to parse download URL for architecture: $arch"
+}
+
+# Get the latest Cursor version from the official API
+get_latest_version() {
+    local platform
+    platform=$(get_api_platform)
+    local api_url="https://cursor.com/api/download?platform=${platform}&releaseTrack=stable"
+    local json
+    if ! json=$(curl -fsSL "$api_url" 2>/dev/null); then
+        print_error "Failed to fetch version information from Cursor API"
         exit 1
     fi
-    
+    local version
+    version=$(echo "$json" | jq -r '.version // empty')
+    if [ -z "$version" ] || [ "$version" = "null" ]; then
+        print_error "Failed to parse version from Cursor API"
+        exit 1
+    fi
+    echo "$version"
+}
+
+# Get download URL from the official API
+get_download_url() {
+    local platform
+    platform=$(get_api_platform)
+    local api_url="https://cursor.com/api/download?platform=${platform}&releaseTrack=stable"
+    local json
+    if ! json=$(curl -fsSL "$api_url" 2>/dev/null); then
+        print_error "Failed to fetch download information from Cursor API"
+        exit 1
+    fi
+    local download_url
+    download_url=$(echo "$json" | jq -r '.downloadUrl // empty')
+    if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
+        print_error "Failed to parse AppImage download URL from Cursor API"
+        exit 1
+    fi
     echo "$download_url"
 }
 
@@ -281,8 +283,8 @@ CURSOR_DIR="/usr/local/share/cursor-ai"
 CURSOR_BINARY="/usr/local/bin/cursor"
 VERSION_FILE="$CURSOR_DIR/version.txt"
 
-# Cursor download page URL
-CURSOR_DOWNLOAD_PAGE="https://cursor.com/download"
+# Cursor API base (stable track)
+CURSOR_API_BASE="https://cursor.com/api/download"
 
 print_status() {
     echo -e "${BLUE}[Cursor Check]${NC} $1"
@@ -304,9 +306,8 @@ print_error() {
 detect_architecture() {
     local arch
     arch=$(uname -m)
-    
     case "$arch" in
-        x86_64)
+        x86_64|amd64)
             echo "x64"
             ;;
         aarch64|arm64)
@@ -318,23 +319,43 @@ detect_architecture() {
     esac
 }
 
-# Get latest version from download page
+# Map to API platform
+get_api_platform() {
+    local arch
+    arch=$(detect_architecture)
+    case "$arch" in
+        x64)
+            echo "linux-x64"
+            ;;
+        arm64)
+            echo "linux-arm64"
+            ;;
+        *)
+            echo "unsupported"
+            ;;
+    esac
+}
+
+# Get latest version via API
 get_latest_cursor_version() {
-    local response
-    response=$(curl -s "$CURSOR_DOWNLOAD_PAGE" 2>/dev/null)
-    if [ $? -ne 0 ]; then
-        print_error "Failed to fetch version information from Cursor download page"
+    local platform
+    platform=$(get_api_platform)
+    if [ "$platform" = "unsupported" ]; then
+        print_error "Unsupported architecture"
         return 1
     fi
-    
-    # Extract version from AppImage URL pattern
+    local api_url="${CURSOR_API_BASE}?platform=${platform}&releaseTrack=stable"
+    local json
+    if ! json=$(curl -fsSL "$api_url" 2>/dev/null); then
+        print_error "Failed to fetch version information from Cursor API"
+        return 1
+    fi
     local version
-    version=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*x86_64\.AppImage' | head -1 | grep -o 'Cursor-[0-9][^-]*' | sed 's/Cursor-//' 2>/dev/null)
-    if [ -z "$version" ]; then
-        print_error "Failed to parse version from download page"
+    version=$(echo "$json" | jq -r '.version // empty')
+    if [ -z "$version" ] || [ "$version" = "null" ]; then
+        print_error "Failed to parse version from Cursor API"
         return 1
     fi
-    
     echo "$version"
 }
 
@@ -400,8 +421,8 @@ CURSOR_DIR="/usr/local/share/cursor-ai"
 CURSOR_BINARY="/usr/local/bin/cursor"
 VERSION_FILE="$CURSOR_DIR/version.txt"
 
-# Cursor download page URL
-CURSOR_DOWNLOAD_PAGE="https://cursor.com/download"
+# Cursor API base (stable track)
+CURSOR_API_BASE="https://cursor.com/api/download"
 
 print_status() {
     echo -e "${BLUE}[Cursor Updater]${NC} $1"
@@ -423,9 +444,8 @@ print_error() {
 detect_architecture() {
     local arch
     arch=$(uname -m)
-    
     case "$arch" in
-        x86_64)
+        x86_64|amd64)
             echo "x64"
             ;;
         aarch64|arm64)
@@ -437,57 +457,66 @@ detect_architecture() {
     esac
 }
 
-# Get download URL based on architecture
-get_download_url() {
+# Map to API platform
+get_api_platform() {
     local arch
     arch=$(detect_architecture)
-    
-    local response
-    response=$(curl -s "$CURSOR_DOWNLOAD_PAGE" 2>/dev/null)
-    if [ $? -ne 0 ]; then
-        print_error "Failed to fetch download information from Cursor download page"
-        return 1
-    fi
-    
-    local download_url
     case "$arch" in
         x64)
-            download_url=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*x86_64\.AppImage' | head -1 2>/dev/null)
+            echo "linux-x64"
             ;;
         arm64)
-            download_url=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*aarch64\.AppImage' | head -1 2>/dev/null)
+            echo "linux-arm64"
             ;;
         *)
-            print_error "Unsupported architecture: $arch"
-            exit 1
+            echo "unsupported"
             ;;
     esac
-    
-    if [ -z "$download_url" ]; then
-        print_error "Failed to parse download URL for architecture: $arch"
+}
+
+# Get download URL via API
+get_download_url() {
+    local platform
+    platform=$(get_api_platform)
+    if [ "$platform" = "unsupported" ]; then
+        print_error "Unsupported architecture"
         return 1
     fi
-    
+    local api_url="${CURSOR_API_BASE}?platform=${platform}&releaseTrack=stable"
+    local json
+    if ! json=$(curl -fsSL "$api_url" 2>/dev/null); then
+        print_error "Failed to fetch download information from Cursor API"
+        return 1
+    fi
+    local download_url
+    download_url=$(echo "$json" | jq -r '.downloadUrl // empty')
+    if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
+        print_error "Failed to parse AppImage download URL from Cursor API"
+        return 1
+    fi
     echo "$download_url"
 }
 
-# Get latest version from download page
+# Get latest version via API
 get_latest_cursor_version() {
-    local response
-    response=$(curl -s "$CURSOR_DOWNLOAD_PAGE" 2>/dev/null)
-    if [ $? -ne 0 ]; then
-        print_error "Failed to fetch version information from Cursor download page"
+    local platform
+    platform=$(get_api_platform)
+    if [ "$platform" = "unsupported" ]; then
+        print_error "Unsupported architecture"
         return 1
     fi
-    
-    # Extract version from AppImage URL pattern
+    local api_url="${CURSOR_API_BASE}?platform=${platform}&releaseTrack=stable"
+    local json
+    if ! json=$(curl -fsSL "$api_url" 2>/dev/null); then
+        print_error "Failed to fetch version information from Cursor API"
+        return 1
+    fi
     local version
-    version=$(echo "$response" | grep -o 'https://downloads.cursor.com[^"]*x86_64\.AppImage' | head -1 | grep -o 'Cursor-[0-9][^-]*' | sed 's/Cursor-//' 2>/dev/null)
-    if [ -z "$version" ]; then
-        print_error "Failed to parse version from download page"
+    version=$(echo "$json" | jq -r '.version // empty')
+    if [ -z "$version" ] || [ "$version" = "null" ]; then
+        print_error "Failed to parse version from Cursor API"
         return 1
     fi
-    
     echo "$version"
 }
 
@@ -592,9 +621,11 @@ test_connectivity() {
         exit 1
     fi
     
-    # Test Cursor API connectivity
-    if ! curl -s --connect-timeout 10 "https://cursor.com" > /dev/null; then
-        print_error "Cannot reach Cursor website"
+    # Test Cursor API connectivity for detected platform
+    local platform
+    platform=$(get_api_platform)
+    if ! curl -fsS --connect-timeout 10 "https://cursor.com/api/download?platform=${platform}&releaseTrack=stable" > /dev/null; then
+        print_error "Cannot reach Cursor API for platform ${platform}"
         print_error "Please check if cursor.com is accessible from your network"
         exit 1
     fi

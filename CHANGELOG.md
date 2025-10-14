@@ -5,6 +5,45 @@ All notable changes to the Cursor IDE Auto-Updater project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - Cursor API Restoration & Script Updates
+
+### Changed
+
+- Switched back from HTML parsing to the official Cursor API (`/api/download`) for version detection and download URLs
+- Added platform mapping: `x64 → linux-x64`, `arm64 → linux-arm64`
+- Network connectivity checks now validate the API for the detected platform
+
+### Fixed
+
+- Resolved failures caused by changes to the download page structure by relying on the stable JSON API
+- Stabilized version detection and download URL retrieval
+
+### Script Updates
+
+#### Main Installation Script (`install-cursor.sh`)
+
+- `get_latest_version()` and `get_download_url()` now use the official API
+- Connectivity test targets the API endpoint for the detected platform
+
+#### Debug Script (`debug-install.sh`)
+
+- Validates API responses for `linux-x64` and `linux-arm64`
+- Verifies `downloadUrl` reachability with HTTP HEAD checks
+
+#### Test Script (`test-installation.sh`)
+
+- Desktop `Exec` line check now allows optional `--no-sandbox`
+- Adds API connectivity checks for both `linux-x64` and `linux-arm64`
+
+#### Embedded Auto-Update Components
+
+- Regenerated `check-cursor-update` and `update-cursor` to use the official API
+
+### Compatibility
+
+- Backward compatible; architecture support unchanged (x64, arm64)
+- Dependency set unchanged (`wget`, `curl`, `jq`)
+
 ## [1.0.5] - Cursor API Migration & Compatibility Update
 
 ### Changed
